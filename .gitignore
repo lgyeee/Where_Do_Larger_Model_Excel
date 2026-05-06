@@ -1,0 +1,12 @@
+# Ignore macOS system files
+.DS_Store
+
+# Ignore environment variables (Secrets!)
+.env
+
+# Ignore python cache
+__pycache__/
+
+# Ignore build folders
+experiments/groq/batch_files/
+experiments/groq/batch_results/
