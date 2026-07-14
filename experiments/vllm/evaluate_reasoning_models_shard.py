@@ -126,7 +126,10 @@ def main():
 
     # ─── 2) Load model config and tokenizer ─────────────────────────────────────
     model_id  = MODEL_MAP[args.model]
-    max_pos = AutoConfig.from_pretrained(model_id).max_position_embeddings
+    if args.model == "gemma4-12b" or args.model == "gemma4-e2b":
+        max_pos = AutoConfig.from_pretrained(model_id).text_config.max_position_embeddings
+    else:
+        max_pos = AutoConfig.from_pretrained(model_id).max_position_embeddings
     if args.model == "deepseek-qwen3-8b":
         cfg = GenerationConfig.from_pretrained("deepseek-ai/DeepSeek-R1-0528")
     else:
