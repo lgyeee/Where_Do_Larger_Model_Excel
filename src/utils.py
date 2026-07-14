@@ -169,6 +169,7 @@ MODEL_MAP   = {
     "olmo3-32b-think": "allenai/Olmo-3-32B-Think",
     "gpt-oss-20b": "openai/gpt-oss-20b",
     "gpt-oss-120b": "openai/gpt-oss-120b",
+    "gemma4-12b": "google/gemma-4-12B-it"
 }
 
 def verify_answer(pred: str, ref: str) -> bool:
