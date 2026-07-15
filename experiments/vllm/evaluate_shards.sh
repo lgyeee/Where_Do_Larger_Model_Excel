@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+# ─── WSL2 / vLLM workarounds ─────────────────────────────────────────
+# WSL2 defaults to no pinned memory, which breaks vLLM's V2 model runner.
+export VLLM_WSL2_ENABLE_PIN_MEMORY=1
+# FlashInfer sampling needs a working nvcc to JIT-compile kernels, which the
+# pip-installed cu13 toolchain can't provide here; fall back to torch sampling.
+export VLLM_USE_FLASHINFER_SAMPLER=0
 # ─── Trap SIGINT/SIGTERM and kill all child jobs ─────────────────────
 trap 'echo; echo "⚡️ Interrupted—killing all shards..."; jobs -p | xargs -r kill; exit 1' SIGINT SIGTERM
 
