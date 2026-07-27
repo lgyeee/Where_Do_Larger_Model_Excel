@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import json
 import argparse
 import shutil
@@ -147,6 +148,15 @@ def compute_valid_g(q_stat: dict, n_sample: int) -> tuple[float | None, float | 
     if g <= 0:
         return llm_pr, slm_pr, llm_pool, slm_pool, 0, "insufficient pool size for question, skip"
     return llm_pr, slm_pr, llm_pool, slm_pool, g, None
+
+
+def parse_json_content(content: str):
+    """Parse model output that may be wrapped in ```json ... ``` fences."""
+    text = content.strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
+    if m:
+        text = m.group(1).strip()
+    return json.loads(text)
 
 
 def main():
@@ -356,11 +366,11 @@ Each object MUST follow this exact schema:
             # ================================
             if content:
                 try:
-                    analysis_list = json.loads(content)
+                    analysis_list = parse_json_content(content)
                 except Exception as e:
                     tqdm.write(f"[ERROR] parse JSON failed: {e}")
-            
-              
+                    tqdm.write(f"[DEBUG] content_repr[:300]={content[:300]!r}")
+
             q_entry["analysis"].append({
                 "llm_run_id": llm_resp_id,
                 "slm_run_id": slm_resp_id,
