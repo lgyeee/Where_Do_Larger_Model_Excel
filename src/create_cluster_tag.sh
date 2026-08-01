@@ -3,6 +3,16 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Prefer project venv (prompt shows as linguanyi); override with PYTHON_BIN=...
+PYTHON_BIN="${PYTHON_BIN:-$HOME/.venv/bin/python}"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="$(command -v python3 || command -v python || true)"
+fi
+if [[ -z "${PYTHON_BIN}" ]]; then
+  echo "No python found. Activate venv: source ~/.venv/bin/activate" >&2
+  exit 1
+fi
+
 ANALYSIS_MODEL="${ANALYSIS_MODEL:-openai/gpt-5.2}"
 DATASETS_ARG="${SYNTH_DATASETS:-}"
 LOG_DIR="${LOG_DIR:-clustering_logs}"
@@ -28,7 +38,7 @@ run_pair() {
     echo "── summarizing  pcadim=$dim  k=$k  | $model_large vs $model_small"
     extra_args=()
     [[ -n "$datasets_arg" ]] && extra_args+=(--datasets "$datasets_arg")
-    uv run --python 3.12 python summarizing.py \
+    "$PYTHON_BIN" summarizing.py \
       "${extra_args[@]}" \
       --model_large "$model_large" \
       --model_small "$model_small" \
@@ -40,14 +50,16 @@ run_pair() {
   done
 }
 
-# Hardcoded candidates (Qwen)
 run_pair "qwen3-32b" "qwen3-8b" \
   "4:5" "4:6" "4:4" "4:3" \
   "8:7" "8:8" "8:9" "8:6"
 
-# Hardcoded candidates (GPT-OSS)
 run_pair "gpt-oss-120b" "gpt-oss-20b" \
   "4:2" "4:5" "4:3" "4:6" \
   "8:2" "8:13" "8:14" "8:12" "8:3"
+
+run_pair "gemma4-12b" "gemma4-e4b" \
+  "4:5" "4:14" "4:13" "4:7" "4:12" \
+  "8:9" "8:11" "8:10" "8:13"
 
 echo "Done. Cluster-tag JSONs under clustering_tags/<model_family>/pcadim*/"

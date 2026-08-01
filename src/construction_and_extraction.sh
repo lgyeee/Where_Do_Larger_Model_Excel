@@ -3,10 +3,11 @@ set -euo pipefail
 
 # ─── Configuration ────────────────────────────────────────────────
 read -ra SUBJECTS <<< "${SUBJECTS:-math physics chemistry programming}"
-read -ra MODEL_PAIRS <<< "${MODEL_PAIRS:-qwen3-32b:qwen3-8b gpt-oss-120b:gpt-oss-20b}"
+read -ra MODEL_PAIRS <<< "${MODEL_PAIRS:-qwen3-32b:qwen3-8b gpt-oss-120b:gpt-oss-20b gemma4-12b:gemma4-e4b}"
 
 GAP_VALUE="${GAP_VALUE:-0.6}"                 # e.g. 0.6
 N_SAMPLE="${N_SAMPLE:-10}"                    # e.g. 10
+SEED="${SEED:-42}"                            # run-pair sampling seed
 ADVANTAGE_EXTRACTOR="${ADVANTAGE_EXTRACTOR:-gemini-3-pro}"  # maps to --advantage_extractor
 # Set FROM_HF=1 to download HF traces into eval_outputs/ first (default: use local eval_outputs only).
 FROM_HF="${FROM_HF:-0}"
@@ -57,6 +58,7 @@ for SUBJECT in "${SUBJECTS[@]}"; do
           --advantage_extractor "$ADVANTAGE_EXTRACTOR"
           --n-sample "$N_SAMPLE"
           --gap-value "$GAP_VALUE"
+          --seed "$SEED"
         )
         if [[ "$FROM_HF" == "1" ]]; then
           cmd+=(--from-hf)

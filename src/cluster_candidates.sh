@@ -6,6 +6,7 @@ trap 'echo; echo "⚡️ Interrupted—killing clustering..."; jobs -p | xargs -
 
 # ─── Configuration (override via env) ────────────────────────────────
 read -ra DATASETS <<< "${DATASET_OVERRIDE:-}"
+ADVANTAGE_EXTRACTOR="${ADVANTAGE_EXTRACTOR:-gemini-3-pro}"
 
 LOG_DIR="clustering_logs"
 mkdir -p "$LOG_DIR"
@@ -39,10 +40,11 @@ run_fixed_k() {
     local k="${pair##*:}"
     local log_tag="${model_large}_vs_${model_small}_pcadim${d}_k${k}"
     echo "   ▶ clustering  pcadim=$d  k=$k  (log: ${log_tag}.log)"
-    uv run --python 3.12 python adv_cluster.py \
+    python adv_cluster.py \
       --datasets "$datasets_arg" \
       --model_large "$model_large" \
       --model_small "$model_small" \
+      --advantage_extractor "$ADVANTAGE_EXTRACTOR" \
       --use_cached_embeddings \
       --dr_method PCA \
       --dr_dim "$d" \
@@ -52,10 +54,13 @@ run_fixed_k() {
   done
 }
 
-# Fixed-k candidates
+# Fixed-k candidates (from each pair's *_dim_selection.csv selected dims)
 run_fixed_k "qwen3-32b" "qwen3-8b" \
   "4:5" "4:6" "4:4" "4:3" \
   "8:7" "8:8" "8:9" "8:6"
 run_fixed_k "gpt-oss-120b" "gpt-oss-20b" \
   "4:2" "4:5" "4:3" "4:6" \
   "8:2" "8:13" "8:14" "8:12" "8:3"
+run_fixed_k "gemma4-12b" "gemma4-e4b" \
+  "4:5" "4:14" "4:13" "4:7" "4:12" \
+  "8:9" "8:11" "8:10" "8:13"

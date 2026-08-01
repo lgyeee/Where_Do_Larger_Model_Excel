@@ -8,10 +8,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 import requests
 from utils import DATASET_MAP, MODEL_MAP
-from api_utils import API_MODEL_MAP
+from api_utils import OPENROUTER_MODEL_MAP
 from tqdm import tqdm
 import random
-# Load .env (OPENROUTER_API_KEY / OPENROUTER_URL)
+
+# Prefer repo-root .env, then cwd override.
+_SRC_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SRC_DIR.parent
+ADVANTAGE_ROOT = _SRC_DIR / "advantage_descriptions"
+load_dotenv(_REPO_ROOT / ".env")
 load_dotenv()
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = os.environ.get("OPENROUTER_URL")
@@ -165,18 +170,46 @@ def main():
     parser.add_argument("--dataset", choices=DATASET_MAP.keys(), default="MATH-500")
     parser.add_argument("--model_large", choices=MODEL_MAP.keys(), default="gpt-oss-120b")
     parser.add_argument("--model_small", choices=MODEL_MAP.keys(), default="gpt-oss-20b")
-    parser.add_argument("--advantage_extractor", choices=API_MODEL_MAP.keys(), default="gemini-3-pro")
+    parser.add_argument("--advantage_extractor", choices=OPENROUTER_MODEL_MAP.keys(), default="gemini-3-pro")
     parser.add_argument("--n-sample", type=int, default=2, help="which runs file to read (e.g., 2_runs.json)")
-    parser.add_argument("--gap-value", type=float, default=0.6, help="gap ratio between LLM and SLM pass rates (e.g., 0.6 = 60%)")
+    parser.add_argument("--gap-value", type=float, default=0.6, help="gap ratio between LLM and SLM pass rates (e.g., 0.6 = 60%%)")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="RNG seed for LLM/SLM run-pair sampling (same gap+seed → same pairs across extractors).",
+    )
     parser.add_argument(
         "--from-hf",
         action="store_true",
-        help=f"Download reasoning traces from Hugging Face into eval_outputs/ before running (repo: {HF_TRACES_REPO}).",
+        help=(
+            "Download reasoning traces from Hugging Face into eval_outputs/ before running "
+            f"(repo: {HF_TRACES_REPO})."
+        ),
     )
     args = parser.parse_args()
 
     if not OPENROUTER_API_KEY or not OPENROUTER_URL:
         raise SystemExit("Please set OPENROUTER_API_KEY and OPENROUTER_URL in env/.env")
+    random.seed(args.seed)
+    extractor_model_id = OPENROUTER_MODEL_MAP[args.advantage_extractor]["model_id"]
+
+    def build_output_payload(questions_map: dict) -> dict:
+        """Include sampling metadata so released artifacts stay reproducible."""
+        return {
+            "meta": {
+                "seed": args.seed,
+                "gap_value": args.gap_value,
+                "n_sample": args.n_sample,
+                "dataset": args.dataset,
+                "model_large": args.model_large,
+                "model_small": args.model_small,
+                "advantage_extractor": args.advantage_extractor,
+                "advantage_extractor_model_id": extractor_model_id,
+            },
+            "questions": list(questions_map.values()),
+        }
+
     Path("eval_outputs").mkdir(parents=True, exist_ok=True)
     if args.from_hf:
         from huggingface_hub import snapshot_download
@@ -203,10 +236,14 @@ def main():
         
     # ===============================================
     # 1.3) locate output file
+    #     src/advantage_descriptions/{subject}/{dataset}/{extraction_model}/...
     # ===============================================
-    output_file = Path(
-        f"advantage_descriptions/{subject}/{args.dataset}/"
-        f"{args.model_large}_vs_{args.model_small}_analysis.json"
+    output_file = (
+        ADVANTAGE_ROOT
+        / subject
+        / args.dataset
+        / args.advantage_extractor
+        / f"{args.model_large}_vs_{args.model_small}_analysis.json"
     )
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -339,7 +376,7 @@ Each object MUST follow this exact schema:
 """
             messages = [{"role": "user", "content": prompt}]
             payload = {
-                    "model": API_MODEL_MAP[args.advantage_extractor],
+                    "model": extractor_model_id,
                     "messages": messages,
                     "temperature": 0,
             }
@@ -378,15 +415,13 @@ Each object MUST follow this exact schema:
             })
             # flush after each question update
             with output_file.open("w", encoding="utf-8") as f:
-                json.dump({"questions": list(questions_map.values())}, f, ensure_ascii=False, indent=2)
+                json.dump(build_output_payload(questions_map), f, ensure_ascii=False, indent=2)
             tqdm.write(f"[INFO] flushed question {q} to {output_file}")
-
-    # flatten to list
-    analysis_data = {"questions": list(questions_map.values())}
 
     # ===============================================
     # 4) save results
     # ===============================================
+    analysis_data = build_output_payload(questions_map)
     with output_file.open("w", encoding="utf-8") as f:
         json.dump(analysis_data, f, ensure_ascii=False, indent=2)
     tqdm.write(f"Saved analysis outputs to {output_file}")

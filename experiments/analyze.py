@@ -25,7 +25,7 @@ def load_runs(path: str) -> pd.DataFrame:
 
 # Specify datasets and models
 datasets = ['OMNI-MATH', 'HHMT', 'JEEBENCH-MATH', 'gpqa-physics', 'JEEBENCH-PHYSICS', 'OlympiadBench-physics', 'JEEBENCH-CHEMISTRY', 'gpqa-chemistry', 'CRUXEVAL-O','CRUXEVAL-I']
-models   = ['qwen3-8b', 'qwen3-32b', 'gpt-oss-20b', 'gpt-oss-120b']
+models   = ['qwen3-8b', 'qwen3-32b', 'gpt-oss-20b', 'gpt-oss-120b', 'gemma4-e4b', 'gemma4-12b']
 EVAL_DIR = Path(__file__).resolve().parents[1] / "src" / "eval_outputs"
 
 

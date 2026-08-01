@@ -6,7 +6,60 @@
 
 # Ignore python cache
 __pycache__/
+*.py[cod]
+*.pyo
 
-# Ignore build folders
+# Ignore editor / local env metadata
+.venv/
+venv/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---------------------------------------------------------------------------
+# Pipeline outputs / metadata (do not commit)
+# ---------------------------------------------------------------------------
+
+# Advantage extraction outputs (canonical: src/advantage_descriptions/)
+src/advantage_descriptions/
+# Legacy root-level copies (if any remain from older runs)
+advantage_descriptions/
+src/eval_outputs/
+
+# Clustering / embedding / heatmap artifacts under src/
+src/advantage_embeddings/
+src/api_logs/
+src/clustering_logs/
+src/clustering_results/
+src/clustering_tags/
+src/heatmaps_results/
+src/select_results/
+
+# Generic log / cache artifacts
+*.log
+**/logs/
+
+# Groq batch IO (legacy experiments/ path)
 experiments/groq/batch_files/
 experiments/groq/batch_results/
+
+# Intervention experiment run outputs (scripts under these trees stay tracked
+# only if they are not inside the ignored dirs below)
+experiments_intervention/backups/
+experiments_intervention/constraints/
+experiments_intervention/llm-guided_results/
+experiments_intervention/slm-guided_results/
+experiments_intervention/slm-normal_results/
+experiments_intervention/slm_results/
+experiments_intervention/prompt_tokens/
+experiments_intervention/vllm/llm-guided_results/
+experiments_intervention/vllm/slm-guided_results/
+experiments_intervention/vllm/slm-normal_results/
+experiments_intervention/vllm/slm_results/
+experiments_intervention/vllm/logs/
+
+# Generated plots under intervention (keep plot.py trackable)
+experiments_intervention/plot/*.png
+experiments_intervention/plot/*.pdf
+experiments_intervention/plot/*.svg

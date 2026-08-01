@@ -18,7 +18,7 @@ for p in (base.parents[2] / "src", base.parents[3]):
 from api_utils import GROQ_MODEL_MAP
 from utils import DATASET_MAP, MODEL_MAP, extract_answer, verify_answer
 from tqdm import tqdm
-from api_utils import make_messages, make_sampling_params
+from api_utils import make_groq_messages, make_sampling_params
 
 
 def main():
@@ -90,7 +90,7 @@ def main():
     )
 
     # 4) ──── Prepare Sampling Parameters ───────────────────────────────
-    sampling_params = make_sampling_params(max_tokens, args.reasoning_effort)
+    sampling_params = make_sampling_params(max_tokens, args.reasoning_effort, args.model)
 
     # 5) ──── Build messages ───────────────────────────────
     messages_list = []
@@ -142,7 +142,7 @@ def main():
             prompt = f"Problem: {q}\n\nPlease reason step by step, and put your final answer within \\boxed{{}}."
 
         messages_list.append({
-            "messages": make_messages(prompt, model_id, sampling_params),
+            "messages": make_groq_messages(prompt, model_id, sampling_params),
             "question": q,
             "gold": gold,
         })

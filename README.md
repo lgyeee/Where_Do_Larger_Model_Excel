@@ -31,10 +31,11 @@ pip install -r requirements.txt
 
 ## Inference and Evaluation
 
-We evaluate two model families:
+We evaluate three model families:
 
 - `qwen3-8b` vs. `qwen3-32b`
 - `gpt-oss-20b` vs. `gpt-oss-120b`
+- `gemma4-e4b` vs. `gemma4-12b`
 
 ### Qwen3 (local vLLM)
 
@@ -111,14 +112,16 @@ cd src
 ### Stage 1 and 2: Constructing the Analysis Question Set & Advantage Extraction
 
 We first identify questions where the larger model consistently outperforms the smaller model
-and use `gemini-3-pro` as an advantage extractor.   
-Please configure the `OPENROUTER_API_KEY` in your `.env` file (for steps under `src/`, placing `.env` in `src/` is simplest).
+and use `gemini-3-pro` as an advantage extractor.  
+Outputs are written under `src/advantage_descriptions/{subject}/{dataset}/{ADVANTAGE_EXTRACTOR}/`.  
+Each output JSON includes a `meta` block (`seed`, `gap_value`, model pair, extractor) plus the sampled `llm_run_id` / `slm_run_id` pairs under `questions`.  
+Please configure the `OPENROUTER_API_KEY` in your `.env` file (repo-root `.env` is preferred).
 
 ```bash
 bash construction_and_extraction.sh
 ```
 
-Optional env vars: `GAP_VALUE`, `SUBJECTS`, `MODEL_PAIRS`, `ADVANTAGE_EXTRACTOR`.
+Optional env vars: `GAP_VALUE`, `SUBJECTS`, `MODEL_PAIRS`, `ADVANTAGE_EXTRACTOR`, `SEED` (default `42`).
 
 The `GAP_VALUE` variable controls the minimum pass-rate gap ratio used to construct the analysis question set (default is `0.6` = `60%`).
 If you cannot run evaluation locally, set `FROM_HF=1` when running `construction_and_extraction.sh` to download raw CoT traces from Hugging Face into `eval_outputs/` (repo: `lgyeee/where-larger-models-excel-reasoning-traces`). By default the script uses local `eval_outputs/` only (`FROM_HF=0`).
@@ -141,11 +144,11 @@ This script mainly uses `adv_cluster.py` and will:
 3. Run clustering for multiple combinations of PCA dimensions (`pca_dim`) and cluster numbers (`k`)
 
 **Main parameters and configuration:**
-- **Model pairs:** By default, both `qwen3-32b:qwen3-8b` and `gpt-oss-120b:gpt-oss-20b` are evaluated.  
+- **Model pairs:** By default, `qwen3-32b:qwen3-8b`, `gpt-oss-120b:gpt-oss-20b`, and `gemma4-12b:gemma4-e4b` are evaluated.  
   - Use `MODEL_PAIRS_OVERRIDE="large:small ..."` to specify pairs, or 
   - Use `MODEL_LARGE_OVERRIDE` / `MODEL_SMALL_OVERRIDE` for a single pair.
 - **Datasets:** By default, all relevant datasets are included.  
-  - For Qwen3, HHMT is omitted because, in our runs, there were no gap-filtered samples for that split (so nothing to cluster). For GPT-OSS, HHMT is included as usual.
+  - For Qwen3, HHMT is omitted because, in our runs, there were no gap-filtered samples for that split (so nothing to cluster). For GPT-OSS and Gemma4, HHMT is included as usual.
 - **Embeddings caching:** The first PCA dimension for each pair computes and caches embeddings; subsequent dimensions re-use cached results.  
   - To force using cached embeddings for all, run:
     ```bash
@@ -178,8 +181,11 @@ In practice, we found that using `pca_dim = 4` and `pca_dim = 8` yields good res
   - For `pca_dim = 4`: try `k = 3, 4, 5, 6`
   - For `pca_dim = 8`: try `k = 6, 7, 8, 9`
 - **GPT-OSS** (`gpt-oss-120b` vs `gpt-oss-20b`):  
-  - For `pca_dim = 4`: try `k = 2, 3, 4, 5, 6`
+  - For `pca_dim = 4`: try `k = 2, 3, 5, 6`
   - For `pca_dim = 8`: try `k = 2, 3, 12, 13, 14`
+- **Gemma4** (`gemma4-12b` vs `gemma4-e4b`):  
+  - For `pca_dim = 4`: try `k = 5, 7, 12, 13, 14`
+  - For `pca_dim = 8`: try `k = 9, 10, 11, 13`
 
 Adjust the (dim, k) pairs in `cluster_candidates.sh` if needed (defaults given above), then run:
 
@@ -215,7 +221,36 @@ This calls `select_cluster_candidates.py`, which uses a reviewer model (default:
 bash draw_heatmaps.sh
 ```
 
-By default this runs heatmaps for both model pairs in `draw_heatmaps.sh`. Each pair writes CSV tables and three PNGs (counts, row-normalized proportions, column-normalized proportions) under `heatmaps_results/`; the paper figures use selected views from these outputs.
+By default this runs heatmaps for all three model pairs in `draw_heatmaps.sh`. Each pair writes CSV tables and three PNGs (counts, row-normalized proportions, column-normalized proportions) under `heatmaps_results/`; the paper figures use selected views from these outputs.
+
+## Intervention experiments (`experiments_intervention/`)
+
+Constraint-guided reasoning interventions on the retained question set from Stage 1–2.
+
+| Backend | Models | Role |
+|---------|--------|------|
+| `vllm/` | Qwen3 | Local shard eval + constraint extraction |
+| `OpenRouter/` + `extract_constraints.py` | gpt-oss | API eval + constraint extraction |
+
+Shared analysis: `analyze.py`, `compute_prompt_tokens.py`, `plot/plot.py`.
+
+Inputs read from `src/advantage_descriptions/{subject}/{dataset}/{ADVANTAGE_EXTRACTOR}/...`.  
+Outputs (`constraints/`, `*_results/`, `prompt_tokens/`, plots, logs) stay local and are gitignored.
+
+Example (Qwen / vLLM):
+
+```bash
+EVAL_MODE=slm-guided MODEL_OVERRIDE="qwen3-8b" \
+  bash experiments_intervention/vllm/evaluate_shards.sh
+```
+
+Example (gpt-oss / OpenRouter):
+
+```bash
+OPENROUTER_API_KEY=... bash experiments_intervention/extract_constraints.sh
+MODEL_SMALL=gpt-oss-20b MODEL_LARGE=gpt-oss-120b \
+  bash experiments_intervention/OpenRouter/evaluate.sh
+```
 
 
 ## Citation

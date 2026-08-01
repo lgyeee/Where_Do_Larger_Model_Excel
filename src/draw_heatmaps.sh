@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 DATASETS_ALL="OMNI-MATH JEEBENCH-MATH HHMT gpqa-physics JEEBENCH-PHYSICS OlympiadBench-physics JEEBENCH-CHEMISTRY gpqa-chemistry CRUXEVAL-O CRUXEVAL-I"
 
-for pair in qwen3-32b:qwen3-8b gpt-oss-120b:gpt-oss-20b; do
+for pair in qwen3-32b:qwen3-8b gpt-oss-120b:gpt-oss-20b gemma4-12b:gemma4-e4b; do
   MODEL_LARGE="${pair%%:*}"
   MODEL_SMALL="${pair##*:}"
   DATASETS_ARG="$DATASETS_ALL"
@@ -17,6 +17,10 @@ for pair in qwen3-32b:qwen3-8b gpt-oss-120b:gpt-oss-20b; do
       ;;
     gpt-oss-120b:gpt-oss-20b)
       DIM=4 K=6
+      ;;
+    gemma4-12b:gemma4-e4b)
+      # Highest summed reviewer scores in select_results (adjust after final pick).
+      DIM=4 K=7
       ;;
     *)
       DIM=8 K=6

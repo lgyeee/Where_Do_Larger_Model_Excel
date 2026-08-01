@@ -12,7 +12,7 @@ if [[ -n "${MODEL_PAIRS_OVERRIDE:-}" ]]; then
 elif [[ -n "${MODEL_LARGE_OVERRIDE:-}" && -n "${MODEL_SMALL_OVERRIDE:-}" ]]; then
   MODEL_PAIRS=( "${MODEL_LARGE_OVERRIDE}:${MODEL_SMALL_OVERRIDE}" )
 else
-  MODEL_PAIRS=( "qwen3-32b:qwen3-8b" "gpt-oss-120b:gpt-oss-20b" )
+  MODEL_PAIRS=( "qwen3-32b:qwen3-8b" "gpt-oss-120b:gpt-oss-20b" "gemma4-12b:gemma4-e4b" )
 fi
 
 read -ra DATASETS <<< "${DATASET_OVERRIDE:-}"

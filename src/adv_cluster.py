@@ -15,10 +15,19 @@ from tqdm import tqdm
 from utils import DATASET_MAP, MODEL_MAP
 from embedding_utils import embed_text
 
-def load_advantage_description_file(datasets, model_large, model_small) -> dict:
+_SRC_DIR = Path(__file__).resolve().parent
+ADVANTAGE_ROOT = _SRC_DIR / "advantage_descriptions"
+
+def load_advantage_description_file(datasets, model_large, model_small, advantage_extractor="gemini-3-pro") -> dict:
     data_by_ds = {}
     for ds in datasets:
-        path = f"advantage_descriptions/{DATASET_MAP[ds]['subject']}/{ds}/{model_large}_vs_{model_small}_analysis.json"
+        path = (
+            ADVANTAGE_ROOT
+            / DATASET_MAP[ds]["subject"]
+            / ds
+            / advantage_extractor
+            / f"{model_large}_vs_{model_small}_analysis.json"
+        )
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         data_by_ds[ds] = data
@@ -64,6 +73,12 @@ def main():
     parser.add_argument("--datasets", type=str, default="OMNI-MATH, JEEBENCH-MATH, HHMT, gpqa-physics, JEEBENCH-PHYSICS, OlympiadBench-physics, JEEBENCH-CHEMISTRY, gpqa-chemistry, CRUXEVAL-O, CRUXEVAL-I", help="ex: OMNI-MATH, JEEBENCH-MATH, HHMT, gpqa-physics, JEEBENCH-PHYSICS, OlympiadBench-physics, JEEBENCH-CHEMISTRY, gpqa-chemistry, CRUXEVAL-O, CRUXEVAL-I")
     parser.add_argument("--model_large", choices=MODEL_MAP.keys(), default="gpt-oss-120b")
     parser.add_argument("--model_small", choices=MODEL_MAP.keys(), default="gpt-oss-20b")
+    parser.add_argument(
+        "--advantage_extractor",
+        type=str,
+        default="gemini-3-pro",
+        help="Subdir under src/advantage_descriptions/{subject}/{dataset}/ (default: gemini-3-pro)",
+    )
     parser.add_argument("--use_cached_embeddings", action="store_true", help="use existing embedding files instead of regenerating embeddings")
     
     parser.add_argument("--dedup_threshold", type=float, default=0.95, help="cosine similarity threshold for embedding deduplication")
@@ -93,7 +108,9 @@ def main():
     # 2) load advantage descriptions
     # ===============================================
     datasets = [ds.strip() for ds in args.datasets.replace(",", " ").split() if ds.strip()]
-    advantage_description_data_by_ds = load_advantage_description_file(datasets, args.model_large, args.model_small)
+    advantage_description_data_by_ds = load_advantage_description_file(
+        datasets, args.model_large, args.model_small, args.advantage_extractor
+    )
 
     # ===============================================
     # 3) embed advantage descriptions

@@ -227,6 +227,7 @@ def main():
         s = model_id
         s = re.sub(r"(?i)gpt-oss", "GPT-OSS", s)
         s = re.sub(r"(?i)qwen3", "Qwen3", s)
+        s = re.sub(r"(?i)gemma4", "Gemma4", s)
         return s
 
     def _pretty_subject_tick_label(name: str) -> str:
@@ -248,12 +249,13 @@ def main():
 
     ml = args.model_large.lower()
     if "gpt" in ml:
-        cmap_name = "OrRd"
+        cmap = colormaps["OrRd"]
     elif "qwen" in ml:
-        cmap_name = "BuPu"
+        cmap = colormaps["BuPu"]
+    elif "gemma" in ml:
+        cmap = colormaps["Greens"]
     else:
-        cmap_name = "BuPu"
-    cmap = colormaps[cmap_name]
+        cmap = colormaps["BuPu"]
     nrow, ncol = heat.shape
     fig_w = max(12.8, ncol * 0.84 + 4.0)
     title_display = f"{_pretty_model_display_name(args.model_large)} Clusters by Domains"
@@ -287,7 +289,7 @@ def main():
                 norm = PowerNorm(gamma=HEATMAP_POWER_GAMMA, vmin=vmin, vmax=vmax)
                 im = ax.imshow(
                     mat,
-                    cmap=cmap_name,
+                    cmap=cmap,
                     norm=norm,
                     aspect="equal",
                     interpolation="nearest",
@@ -295,7 +297,7 @@ def main():
             else:
                 im = ax.imshow(
                     mat,
-                    cmap=cmap_name,
+                    cmap=cmap,
                     vmin=vmin,
                     vmax=vmax,
                     aspect="equal",
